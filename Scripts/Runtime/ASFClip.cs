@@ -1,0 +1,96 @@
+﻿using System;
+
+namespace AudioBox.ASF
+{
+	public enum ASFClipState
+	{
+		ExitMin,
+		ExitMax,
+		Update,
+		EnterLeft,
+		EnterRight,
+	}
+
+	public abstract class ASFClip
+	{
+		public double       MinTime { get; protected set; }
+		public double       MaxTime { get; protected set; }
+		public ASFClipState State   { get; private set; }
+
+		protected ASFClip(double _MinTime, double _MaxTime)
+		{
+			MinTime = _MinTime;
+			MaxTime = _MaxTime;
+			State   = ASFClipState.ExitMin;
+		}
+
+		public void Sample(double _Time)
+		{
+			ProcessEnter(_Time);
+			
+			ProcessUpdate(_Time, OnSample);
+			
+			ProcessExit(_Time);
+		}
+
+		public abstract object Serialize();
+
+		public abstract void Deserialize(object _Data);
+
+		void ProcessEnter(double _Time)
+		{
+			if (_Time >= MinTime && State == ASFClipState.ExitMin)
+			{
+				State = ASFClipState.EnterLeft;
+				OnEnterMin(_Time);
+			}
+			else if (_Time <= MaxTime && State == ASFClipState.ExitMax)
+			{
+				State = ASFClipState.EnterRight;
+				OnEnterMax(_Time);
+			}
+		}
+
+		void ProcessUpdate(double _Time, Action<double> _Handler)
+		{
+			if (_Time >= MinTime && State == ASFClipState.EnterLeft)
+			{
+				State = ASFClipState.Update;
+				_Handler(_Time);
+			}
+			else if (_Time >= MinTime && _Time <= MaxTime && State == ASFClipState.Update)
+			{
+				_Handler(_Time);
+			}
+			else if (_Time <= MaxTime && State == ASFClipState.EnterRight)
+			{
+				State = ASFClipState.Update;
+				_Handler(_Time);
+			}
+		}
+
+		void ProcessExit(double _Time)
+		{
+			if (_Time < MinTime && State == ASFClipState.Update)
+			{
+				State = ASFClipState.ExitMin;
+				OnExitMin(_Time);
+			}
+			else if (_Time > MaxTime && State == ASFClipState.Update)
+			{
+				State = ASFClipState.ExitMax;
+				OnExitMax(_Time);
+			}
+		}
+
+		protected virtual void OnEnterMin(double _Time) { }
+
+		protected virtual void OnEnterMax(double _Time) { }
+
+		protected virtual void OnSample(double _Time) { }
+
+		protected virtual void OnExitMin(double _Time) { }
+
+		protected virtual void OnExitMax(double _Time) { }
+	}
+}

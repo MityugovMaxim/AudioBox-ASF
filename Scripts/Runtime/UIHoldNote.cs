@@ -1,3 +1,4 @@
+using AudioBox.Spline;
 using AudioBox.UI;
 using UnityEngine;
 using UnityEngine.Scripting;

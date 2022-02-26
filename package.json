@@ -6,11 +6,9 @@
   "unity": "2019.3",
   "dependencies": {
     "com.audiobox.compression": "https://github.com/MityugovMaxim/AudioBox-Compression.git",
-    "com.audiobox.zenject": "https://github.com/MityugovMaxim/AudioBox-Zenject.git",
     "com.audiobox.ui": "https://github.com/MityugovMaxim/AudioBox-UI.git",
     "com.audiobox.logging": "https://github.com/MityugovMaxim/AudioBox-Logging.git",
     "com.audiobox.tasks": "https://github.com/MityugovMaxim/AudioBox-Tasks.git",
-    "com.audiobox.audio": "https://github.com/MityugovMaxim/AudioBox-Audio.git",
-    "com.audiobox.spline": "https://github.com/MityugovMaxim/AudioBox-Spline.git"
+    "com.audiobox.audio": "https://github.com/MityugovMaxim/AudioBox-Audio.git"
   }
 }

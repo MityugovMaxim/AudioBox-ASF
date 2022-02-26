@@ -1,21 +1,18 @@
 {
     "name": "AudioBox.ASF",
     "references": [
-        "GUID:0d8beb7f090555447a6cf5ce9e54dbb4",
         "GUID:71a40d65da4364be182c618591cb6498",
         "GUID:0b740c52d13294861b1fa627d18c24bc",
-        "GUID:44ef435409aca4b5591c3ec5e3021943",
         "GUID:2beaec39240d04784a04872d05d0aab7",
+        "GUID:44ef435409aca4b5591c3ec5e3021943",
         "GUID:7540c68bc83494c94a23dd1c5fd1897a",
-        "GUID:d297e93c38dc94a63a24816331aa2956"
+        "GUID:1c3485417a1dc48a1a260c750d408a01"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "Zenject-usage.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

@@ -5,17 +5,17 @@ using UnityEngine;
 
 namespace AudioBox.ASF
 {
-	public abstract class ASFTrackContext<TClip, TView> : UIEntity where TClip : ASFClip where TView : UIEntity
+	public abstract class ASFTrackContext<TClip> : UIEntity where TClip : ASFClip
 	{
-		readonly Dictionary<TClip, TView> m_Views = new Dictionary<TClip, TView>();
+		readonly Dictionary<TClip, ASFClipContext<TClip>> m_Views = new Dictionary<TClip, ASFClipContext<TClip>>();
 
-		public abstract void AddClip(TClip _Clip, Rect _Rect, Rect _View);
+		public abstract void AddClip(TClip _Clip, Rect _ClipRect, Rect _ViewRect);
 
-		public abstract void RemoveClip(TClip _Clip, Rect _Rect, Rect _View);
+		public abstract void RemoveClip(TClip _Clip, Rect _ClipRect, Rect _ViewRect);
 
-		public abstract void ProcessClip(TClip _Clip, Rect _Rect, Rect _View);
+		public abstract void ProcessClip(TClip _Clip, Rect _ClipRect, Rect _ViewRect);
 
-		protected bool AddView(TClip _Clip, TView _View)
+		protected bool AddView(TClip _Clip, ASFClipContext<TClip> _View)
 		{
 			if (_Clip == null)
 			{
@@ -59,7 +59,12 @@ namespace AudioBox.ASF
 			return true;
 		}
 
-		protected TView GetView(TClip _Clip)
+		protected bool ContainsView(TClip _Clip)
+		{
+			return m_Views.ContainsKey(_Clip) && m_Views[_Clip] != null;
+		}
+
+		protected ASFClipContext<TClip> GetView(TClip _Clip)
 		{
 			if (_Clip == null)
 			{

@@ -2,13 +2,13 @@ using UnityEngine;
 
 namespace AudioBox.ASF
 {
-	public class ASFDoubleTrack : ASFTrack<ASFDoubleClip>
+	public class ASFHoldTrack : ASFTrack<ASFHoldClip>
 	{
 		const int COUNT = 4;
 
 		protected override float Size => Context.GetLocalRect().width / COUNT;
 
-		public ASFDoubleTrack(ASFTrackContext<ASFDoubleClip> _Context) : base(_Context) { }
+		public ASFHoldTrack(ASFTrackContext<ASFHoldClip> _Context) : base(_Context) { }
 
 		public override void Sample(double _Time, double _MinTime, double _MaxTime)
 		{
@@ -20,9 +20,9 @@ namespace AudioBox.ASF
 			Reposition(minIndex, maxIndex, _MinTime, _MaxTime);
 		}
 
-		public override ASFDoubleClip CreateClip()
+		public override ASFHoldClip CreateClip()
 		{
-			return new ASFDoubleClip(0);
+			return new ASFHoldClip(0, 0);
 		}
 	}
 }

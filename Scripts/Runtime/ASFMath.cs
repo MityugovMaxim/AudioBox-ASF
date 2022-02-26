@@ -43,5 +43,19 @@ namespace AudioBox.ASF
 		{
 			return Clamp(Remap(_Value, _A0, _B0, _A1, _B1), _A1, _B1);
 		}
+
+		public static float TimeToPosition(double _Time, double _MinTime, double _MaxTime, float _MinPosition, float _MaxPosition)
+		{
+			double phase = ASFMath.Remap(_Time, _MinTime, _MaxTime);
+			
+			return (float)ASFMath.LerpUnclamped(_MinPosition, _MaxPosition, phase);
+		}
+
+		public static double PositionToTime(float _Position, float _MinPosition, float _MaxPosition, double _MinTime, double _MaxTime)
+		{
+			double phase = ASFMath.Remap(_Position, _MinPosition, _MaxPosition);
+			
+			return ASFMath.LerpUnclamped(_MinTime, _MaxTime, phase);
+		}
 	}
 }

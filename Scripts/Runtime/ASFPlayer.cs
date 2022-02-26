@@ -7,7 +7,6 @@ using AudioBox.Tasks;
 using AudioBox.Audio;
 using UnityEngine;
 using AudioBox.UI;
-using Zenject;
 
 namespace AudioBox.ASF
 {
@@ -17,18 +16,7 @@ namespace AudioBox.ASF
 		Play,
 	}
 
-	public partial class ASFPlayer
-	{
-		[ContextMenu("Test serialize")]
-		public void Serialize() { }
-
-		public void Deserialize(string _JSON)
-		{
-			Debug.LogError(JsonUtility.ToJson(m_Tracks[0], true));
-		}
-	}
-
-	public partial class ASFPlayer : UIEntity
+	public abstract class ASFPlayer : UIEntity
 	{
 		const float MUSIC_OFFSET = 1;
 
@@ -46,11 +34,11 @@ namespace AudioBox.ASF
 			}
 		}
 
+		public double Length => m_MusicMin + m_MusicMax + m_AudioSource.clip.length;
+
 		public event Action OnFinish;
 
 		ASFPlayerState State { get; set; } = ASFPlayerState.Stop;
-
-		public double Length => m_MusicMin + m_MusicMax + m_AudioSource.clip.length;
 
 		float MinTime => m_Duration * (m_Ratio - 1);
 
@@ -63,57 +51,9 @@ namespace AudioBox.ASF
 		[SerializeField] double      m_MusicMax;
 		[SerializeField] AudioSource m_AudioSource;
 
-		[Inject] ASFTapTrack.Factory    m_TapTrackFactory;
-		[Inject] ASFDoubleTrack.Factory m_DoubleTrackFactory;
-
 		readonly List<ASFTrack> m_Tracks = new List<ASFTrack>();
 
 		CancellationTokenSource m_TokenSource;
-
-		protected override void Awake()
-		{
-			base.Awake();
-			
-			m_Tracks.Clear();
-			
-			ASFTapTrack tapTrack = m_TapTrackFactory.Create();
-			for (int i = 0; i < 240; i++)
-			{
-				if (i % 5 != 0)
-					tapTrack.AddClip(new ASFTapClip(m_MusicMin + i, i % 4));
-			}
-			m_Tracks.Add(tapTrack);
-			
-			ASFDoubleTrack doubleTrack = m_DoubleTrackFactory.Create();
-			for (int i = 0; i < 240; i++)
-			{
-				if (i % 5 == 0)
-					doubleTrack.AddClip(new ASFDoubleClip(m_MusicMin + i));
-			}
-			m_Tracks.Add(doubleTrack);
-		}
-
-		public void PlayTest()
-		{
-			Play();
-		}
-
-		public async void RewindTest()
-		{
-			Stop();
-			
-			double source = Time;
-			double target = Time - 1;
-			
-			await UnityTask.Phase(_Phase => Time = ASFMath.Lerp(source, target, _Phase), 2);
-			
-			Play();
-		}
-
-		public void StopTest()
-		{
-			Stop();
-		}
 
 		void LateUpdate()
 		{
@@ -227,5 +167,64 @@ namespace AudioBox.ASF
 			
 			Stop();
 		}
+
+		public object Serialize()
+		{
+			IDictionary<string, object> data = new Dictionary<string, object>();
+			
+			foreach (ASFTrack track in m_Tracks)
+			{
+				if (track == null)
+				{
+					Log.Error(this, "Serialization failed. Track is null.");
+					continue;
+				}
+				
+				string name = track.GetType().Name;
+				
+				data[name] = track.Serialize();
+			}
+			
+			return data;
+		}
+
+		public void Deserialize(object _Data)
+		{
+			IDictionary<string, object> data = _Data as IDictionary<string, object>;
+			
+			if (data == null)
+				return;
+			
+			foreach (var entry in data)
+			{
+				Type type = Type.GetType(entry.Key);
+				
+				if (type == null)
+				{
+					Log.Error(this, "Deserialization failed. Type '{0}' not found.", entry.Key);
+					continue;
+				}
+				
+				object context = GetContext(type);
+				
+				if (context == null)
+				{
+					Log.Error(this, "Deserialization failed. Context '{0}' not found.", type);
+					continue;
+				}
+				
+				ASFTrack track = Activator.CreateInstance(type, context) as ASFTrack;
+				
+				if (track == null)
+				{
+					Log.Error(this, "Deserialization failed. Track '{0}' not found.", type);
+					continue;
+				}
+				
+				track.Deserialize(entry.Value);
+			}
+		}
+
+		protected abstract object GetContext(Type _Type);
 	}
 }

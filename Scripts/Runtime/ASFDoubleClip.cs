@@ -1,15 +1,11 @@
 using System.Collections.Generic;
+using AudioBox.Compression;
 
 namespace AudioBox.ASF
 {
-	public class ASFTapClip : ASFClip
+	public class ASFDoubleClip : ASFClip
 	{
-		public float Position { get; set; }
-
-		public ASFTapClip(double _Time, float _Position) : base(_Time, _Time)
-		{
-			Position = _Position;
-		}
+		public ASFDoubleClip(double _Time) : base(_Time, _Time) { }
 
 		public override object Serialize()
 		{
@@ -22,7 +18,12 @@ namespace AudioBox.ASF
 
 		public override void Deserialize(object _Data)
 		{
-			double time = (double)_Data;
+			Dictionary<string, object> data = _Data as Dictionary<string, object>;
+			
+			if (data == null)
+				return;
+			
+			double time = data.GetDouble("time");
 			MinTime = time;
 			MaxTime = time;
 		}

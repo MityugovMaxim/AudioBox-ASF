@@ -1,4 +1,4 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,68 +8,58 @@ namespace AudioBox.ASF
 	{
 		public abstract void Sample(double _Time, double _MinTime, double _MaxTime);
 
-		protected static float TimeToPosition(double _Time, double _MinTime, double _MaxTime, float _MinPosition, float _MaxPosition)
-		{
-			double phase = ASFMath.Remap(_Time, _MinTime, _MaxTime);
-			
-			return (float)ASFMath.LerpUnclamped(_MinPosition, _MaxPosition, phase);
-		}
+		public abstract object Serialize();
 
-		protected static double PositionToTime(float _Position, float _MinPosition, float _MaxPosition, double _MinTime, double _MaxTime)
-		{
-			double phase = ASFMath.Remap(_Position, _MinPosition, _MaxPosition);
-			
-			return ASFMath.LerpUnclamped(_MinTime, _MaxTime, phase);
-		}
-
-		protected static Rect GetTimeRect(ASFClip _Clip, Rect _Rect, double _MinTime, double _MaxTime)
-		{
-			float minPosition = TimeToPosition(_Clip.MinTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax);
-			float maxPosition = TimeToPosition(_Clip.MaxTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax);
-			
-			return new Rect(
-				_Rect.x,
-				minPosition,
-				_Rect.width,
-				maxPosition - minPosition
-			);
-		}
-
-		protected static Rect GetFullRect(ASFClip _Clip, Rect _Rect, double _MinTime, double _MaxTime, float _Padding = 0)
-		{
-			float minPosition = TimeToPosition(_Clip.MinTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) - _Padding;
-			float maxPosition = TimeToPosition(_Clip.MaxTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) + _Padding;
-			
-			return new Rect(
-				_Rect.x,
-				minPosition,
-				_Rect.width,
-				maxPosition - minPosition
-			);
-		}
-
-		protected static Rect GetCullRect(ASFClip _Clip, Rect _Rect, double _MinTime, double _MaxTime, float _Padding = 0)
-		{
-			float minPosition = TimeToPosition(_Clip.MinTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) - _Padding;
-			float maxPosition = TimeToPosition(_Clip.MaxTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) + _Padding;
-			
-			minPosition = Mathf.Clamp(minPosition, _Rect.yMin, _Rect.yMax);
-			maxPosition = Mathf.Clamp(maxPosition, _Rect.yMin, _Rect.yMax);
-			
-			return new Rect(
-				_Rect.x,
-				minPosition,
-				_Rect.width,
-				maxPosition - minPosition
-			);
-		}
+		public abstract void Deserialize(object _Data);
 	}
 
 	public abstract class ASFTrack<T> : ASFTrack where T : ASFClip
 	{
 		public IReadOnlyList<T> Clips => m_Clips;
 
+		public ASFTrackContext<T> Context { get; }
+
+		protected abstract float Size { get; }
+
 		readonly List<T> m_Clips = new List<T>();
+
+		public ASFTrack(ASFTrackContext<T> _Context)
+		{
+			Context = _Context;
+		}
+
+		public override object Serialize()
+		{
+			IList data = new List<object>();
+			
+			foreach (T clip in Clips)
+			{
+				if (clip != null)
+					data.Add(clip.Serialize());
+			}
+			
+			return data;
+		}
+
+		public override void Deserialize(object _Data)
+		{
+			IList data = _Data as IList;
+			
+			if (data == null)
+				return;
+			
+			foreach (object clipData in data)
+			{
+				T clip = CreateClip();
+				
+				if (clip == null)
+					continue;
+				
+				clip.Deserialize(clipData);
+				
+				AddClip(clip);
+			}
+		}
 
 		public void AddClip(T _Clip)
 		{
@@ -81,17 +71,110 @@ namespace AudioBox.ASF
 			m_Clips.Remove(_Clip);
 		}
 
-		protected virtual (int minIndex, int maxIndex) GetRange(double _MinTime, double _MaxTime)
+		public abstract T CreateClip();
+
+		protected (int minIndex, int maxIndex) GetRange(double _MinTime, double _MaxTime)
 		{
-			int anchor = FindAnchor(_MinTime, _MaxTime);
+			Rect rect = Context.GetLocalRect();
+			
+			float padding = Size * 0.5f;
+			
+			double minTime = ASFMath.PositionToTime(rect.yMin - padding, rect.yMin, rect.yMax, _MinTime, _MaxTime);
+			double maxTime = ASFMath.PositionToTime(rect.yMax + padding, rect.yMin, rect.yMax, _MinTime, _MaxTime);
+			
+			int anchor = FindAnchor(minTime, maxTime);
 			
 			if (anchor < 0)
 				return (anchor, anchor);
 			
-			int minIndex = FindMin(anchor, _MinTime);
-			int maxIndex = FindMax(anchor, _MaxTime);
+			int minIndex = FindMin(anchor, minTime);
+			int maxIndex = FindMax(anchor, maxTime);
 			
 			return (minIndex, maxIndex);
+		}
+
+		protected int MinIndex { get; set; } = -1;
+		protected int MaxIndex { get; set; } = -1;
+
+		protected virtual void Reposition(int _MinIndex, int _MaxIndex, double _MinTime, double _MaxTime)
+		{
+			if (Context == null)
+				return;
+			
+			Rect rect = Context.GetLocalRect();
+			
+			float padding = Size * 0.5f;
+			
+			// Remove clips
+			for (int i = Mathf.Max(0, MinIndex); i <= MaxIndex; i++)
+			{
+				T clip = Clips[i];
+				
+				if (clip == null || i >= _MinIndex && i <= _MaxIndex)
+					continue;
+				
+				Rect clipRect = GetClipRect(clip, rect, _MinTime, _MaxTime);
+				Rect viewRect = GetViewRect(clip, rect, _MinTime, _MaxTime, padding);
+				
+				Context.RemoveClip(clip, clipRect, viewRect);
+			}
+			
+			// Add clips
+			for (int i = Mathf.Max(0, _MinIndex); i <= _MaxIndex; i++)
+			{
+				T clip = Clips[i];
+				
+				if (clip == null || i >= MinIndex && i <= MaxIndex)
+					continue;
+				
+				Rect clipRect = GetClipRect(clip, rect, _MinTime, _MaxTime);
+				Rect viewRect = GetViewRect(clip, rect, _MinTime, _MaxTime, padding);
+				
+				Context.AddClip(clip, clipRect, viewRect);
+			}
+			
+			// Process clips
+			for (int i = Mathf.Max(0, _MinIndex); i <= _MaxIndex; i++)
+			{
+				T clip = Clips[i];
+				
+				if (clip == null || i < MinIndex || i > MaxIndex)
+					continue;
+				
+				Rect clipRect = GetClipRect(clip, rect, _MinTime, _MaxTime);
+				Rect viewRect = GetViewRect(clip, rect, _MinTime, _MaxTime, padding);
+				
+				Context.ProcessClip(clip, clipRect, viewRect);
+			}
+			
+			MinIndex = _MinIndex;
+			MaxIndex = _MaxIndex;
+		}
+
+		protected virtual Rect GetClipRect(T _Clip, Rect _Rect, double _MinTime, double _MaxTime)
+		{
+			float minPosition = ASFMath.TimeToPosition(_Clip.MinTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax);
+			float maxPosition = ASFMath.TimeToPosition(_Clip.MaxTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax);
+			
+			return new Rect(
+				_Rect.x,
+				minPosition,
+				_Rect.width,
+				maxPosition - minPosition
+			);
+		}
+
+		protected virtual Rect GetViewRect(T _Clip, Rect _Rect, double _MinTime, double _MaxTime, float _Padding = 0)
+		{
+			float minPosition = ASFMath.TimeToPosition(_Clip.MinTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) - _Padding;
+			float maxPosition = ASFMath.TimeToPosition(_Clip.MaxTime, _MinTime, _MaxTime, _Rect.yMin, _Rect.yMax) + _Padding;
+			
+			return new Rect(
+				_Rect.x,
+				minPosition,
+				_Rect.width,
+				maxPosition - minPosition
+			);
 		}
 
 		int FindMin(int _Anchor, double _MinTime)

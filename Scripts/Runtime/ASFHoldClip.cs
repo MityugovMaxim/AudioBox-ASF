@@ -32,6 +32,21 @@ namespace AudioBox.ASF
 			};
 		}
 
+		public ASFHoldClip(double _MinTime, double _MaxTime, params Key[] _Keys) : base(_MinTime, _MaxTime)
+		{
+			Keys = new List<Key>(_Keys);
+		}
+
+		public override ASFClip Clone()
+		{
+			Key[] keys = new Key[Keys.Count];
+			
+			for (int i = 0; i < Keys.Count; i++)
+				keys[i] = new Key(Keys[i].Time, Keys[i].Position);
+			
+			return new ASFHoldClip(MinTime, MaxTime, keys);
+		}
+
 		public override object Serialize()
 		{
 			IDictionary<string, object> data = new Dictionary<string, object>();
@@ -59,17 +74,15 @@ namespace AudioBox.ASF
 			return data;
 		}
 
-		public override void Deserialize(object _Data)
+		public override void Deserialize(IDictionary<string, object> _Data)
 		{
-			IDictionary<string, object> data = _Data as IDictionary<string, object>;
-			
-			if (data == null)
+			if (_Data == null)
 				return;
 			
-			MinTime = data.GetDouble("min_time");
-			MaxTime = data.GetDouble("max_time");
+			MinTime = _Data.GetDouble("min_time");
+			MaxTime = _Data.GetDouble("max_time");
 			
-			IList keysData = data.GetList("keys");
+			IList keysData = _Data.GetList("keys");
 			foreach (IDictionary<string, object> keyData in keysData.Cast<IDictionary<string, object>>())
 			{
 				if (keyData == null)

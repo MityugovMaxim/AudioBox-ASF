@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AudioBox.Logging;
@@ -35,6 +36,24 @@ namespace AudioBox.ASF
 		}
 
 		public double Length => m_MusicMin + m_MusicMax + m_AudioSource.clip.length;
+
+		public float Duration
+		{
+			get => m_Duration;
+			protected set => m_Duration = value;
+		}
+
+		public float Ratio
+		{
+			get => m_Ratio;
+			set => m_Ratio = value;
+		}
+
+		public AudioClip AudioClip
+		{
+			get => m_AudioSource.clip;
+			set => m_AudioSource.clip = value;
+		}
 
 		public event Action OnFinish;
 
@@ -152,7 +171,7 @@ namespace AudioBox.ASF
 			Sample();
 		}
 
-		public void Sample()
+		public virtual void Sample()
 		{
 			double minTime = Time + MinTime;
 			double maxTime = Time + MaxTime;
@@ -168,7 +187,7 @@ namespace AudioBox.ASF
 			Stop();
 		}
 
-		public object Serialize()
+		public IDictionary<string, object> Serialize()
 		{
 			IDictionary<string, object> data = new Dictionary<string, object>();
 			
@@ -197,23 +216,12 @@ namespace AudioBox.ASF
 			
 			foreach (var entry in data)
 			{
-				Type type = Type.GetType(entry.Key);
+				Type type = Type.GetType($"AudioBox.ASF.{entry.Key}");
 				
 				if (type == null)
-				{
-					Log.Error(this, "Deserialization failed. Type '{0}' not found.", entry.Key);
 					continue;
-				}
 				
-				object context = GetContext(type);
-				
-				if (context == null)
-				{
-					Log.Error(this, "Deserialization failed. Context '{0}' not found.", type);
-					continue;
-				}
-				
-				ASFTrack track = Activator.CreateInstance(type, context) as ASFTrack;
+				ASFTrack track = m_Tracks.FirstOrDefault(_Track => _Track.GetType() == type);
 				
 				if (track == null)
 				{
@@ -221,10 +229,23 @@ namespace AudioBox.ASF
 					continue;
 				}
 				
-				track.Deserialize(entry.Value);
+				track.Deserialize(entry.Value as IList);
 			}
 		}
 
-		protected abstract object GetContext(Type _Type);
+		protected void AddTrack(ASFTrack _Track)
+		{
+			m_Tracks.Add(_Track);
+		}
+
+		protected void RemoveTrack(ASFTrack _Track)
+		{
+			m_Tracks.Remove(_Track);
+		}
+
+		public T GetTrack<T>() where T : ASFTrack
+		{
+			return m_Tracks.OfType<T>().FirstOrDefault();
+		}
 	}
 }

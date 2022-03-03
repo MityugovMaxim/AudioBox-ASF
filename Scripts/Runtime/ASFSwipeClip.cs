@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using AudioBox.Compression;
+using UnityEngine;
 
 namespace AudioBox.ASF
 {
@@ -13,11 +14,26 @@ namespace AudioBox.ASF
 			Down,
 		}
 
+		public double Time
+		{
+			get => MinTime;
+			set
+			{
+				MinTime = value;
+				MaxTime = value;
+			}
+		}
+
 		public Direction Type { get; set; }
 
 		public ASFSwipeClip(double _Time, Direction _Type) : base(_Time, _Time)
 		{
 			Type = _Type;
+		}
+
+		public override ASFClip Clone()
+		{
+			return new ASFSwipeClip(Time, Type);
 		}
 
 		public override object Serialize()
@@ -30,17 +46,13 @@ namespace AudioBox.ASF
 			return data;
 		}
 
-		public override void Deserialize(object _Data)
+		public override void Deserialize(IDictionary<string, object> _Data)
 		{
-			IDictionary<string, object> data = _Data as IDictionary<string, object>;
-			
-			if (data == null)
+			if (_Data == null)
 				return;
 			
-			double time = data.GetDouble("time");
-			MinTime = time;
-			MaxTime = time;
-			Type    = data.GetEnum<Direction>("type");
+			Time = _Data.GetDouble("time");
+			Type = _Data.GetEnum<Direction>("type");
 		}
 	}
 }

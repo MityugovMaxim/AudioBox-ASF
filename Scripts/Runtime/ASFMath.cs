@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace AudioBox.ASF
 {
@@ -56,6 +57,31 @@ namespace AudioBox.ASF
 			double phase = ASFMath.Remap(_Position, _MinPosition, _MaxPosition);
 			
 			return ASFMath.LerpUnclamped(_MinTime, _MaxTime, phase);
+		}
+
+		public static float TimeToPhase(double _Time, double _MinTime, double _MaxTime)
+		{
+			return (float)ASFMath.Remap(_Time, _MinTime, _MaxTime);
+		}
+
+		public static float PhaseToPosition(float _Phase, float _MinPosition, float _MaxPosition)
+		{
+			return (float)Remap(_Phase, 0, 1, _MinPosition, _MaxPosition);
+		}
+
+		public static float PositionToPhase(float _Position, float _MinPosition, float _MaxPosition)
+		{
+			return (float)Remap(_Position, _MinPosition, _MaxPosition);
+		}
+
+		public static double SnapTime(double _Time, double _Step)
+		{
+			return Math.Abs(_Step) > double.Epsilon * 2 ? Math.Round(_Time / _Step) * _Step : 0d;
+		}
+
+		public static float SnapPhase(float _Phase, float _Step)
+		{
+			return Mathf.Abs(_Phase) > float.Epsilon * 2 ? Mathf.Round(_Phase / _Step) * _Step : 0f;
 		}
 	}
 }

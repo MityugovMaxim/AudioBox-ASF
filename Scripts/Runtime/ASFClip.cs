@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace AudioBox.ASF
 {
@@ -13,8 +14,9 @@ namespace AudioBox.ASF
 
 	public abstract class ASFClip
 	{
-		public double       MinTime { get; protected set; }
-		public double       MaxTime { get; protected set; }
+		public double       MinTime { get; set; }
+		public double       MaxTime { get; set; }
+		public double       Length  => MaxTime - MinTime;
 		public ASFClipState State   { get; private set; }
 
 		protected ASFClip(double _MinTime, double _MaxTime)
@@ -35,7 +37,7 @@ namespace AudioBox.ASF
 
 		public abstract object Serialize();
 
-		public abstract void Deserialize(object _Data);
+		public abstract void Deserialize(IDictionary<string, object> _Data);
 
 		void ProcessEnter(double _Time)
 		{
@@ -50,6 +52,8 @@ namespace AudioBox.ASF
 				OnEnterMax(_Time);
 			}
 		}
+
+		public abstract ASFClip Clone();
 
 		void ProcessUpdate(double _Time, Action<double> _Handler)
 		{

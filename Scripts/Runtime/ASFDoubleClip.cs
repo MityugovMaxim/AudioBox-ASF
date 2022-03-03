@@ -5,7 +5,22 @@ namespace AudioBox.ASF
 {
 	public class ASFDoubleClip : ASFClip
 	{
+		public double Time
+		{
+			get => MinTime;
+			set
+			{
+				MinTime = value;
+				MaxTime = value;
+			}
+		}
+
 		public ASFDoubleClip(double _Time) : base(_Time, _Time) { }
+
+		public override ASFClip Clone()
+		{
+			return new ASFDoubleClip(Time);
+		}
 
 		public override object Serialize()
 		{
@@ -16,16 +31,12 @@ namespace AudioBox.ASF
 			return data;
 		}
 
-		public override void Deserialize(object _Data)
+		public override void Deserialize(IDictionary<string, object> _Data)
 		{
-			Dictionary<string, object> data = _Data as Dictionary<string, object>;
-			
-			if (data == null)
+			if (_Data == null)
 				return;
 			
-			double time = data.GetDouble("time");
-			MinTime = time;
-			MaxTime = time;
+			Time = _Data.GetDouble("time");
 		}
 	}
 }

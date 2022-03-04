@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AudioBox.Logging;
 using AudioBox.Tasks;
 using AudioBox.Audio;
+using AudioBox.Compression;
 using UnityEngine;
 using AudioBox.UI;
 
@@ -214,14 +216,14 @@ namespace AudioBox.ASF
 			if (data == null)
 				return;
 			
-			foreach (var entry in data)
+			foreach (string key in data.GetKeys())
 			{
-				Type type = Type.GetType($"AudioBox.ASF.{entry.Key}");
+				Type type = Type.GetType($"AudioBox.ASF.{key}");
 				
 				if (type == null)
 					continue;
 				
-				ASFTrack track = m_Tracks.FirstOrDefault(_Track => _Track.GetType() == type);
+				ASFTrack track = GetTrack(type);
 				
 				if (track == null)
 				{
@@ -229,7 +231,7 @@ namespace AudioBox.ASF
 					continue;
 				}
 				
-				track.Deserialize(entry.Value as IList);
+				track.Deserialize(data.GetList(key));
 			}
 		}
 
@@ -243,9 +245,28 @@ namespace AudioBox.ASF
 			m_Tracks.Remove(_Track);
 		}
 
+		protected void ClearTracks()
+		{
+			m_Tracks.Clear();
+		}
+
 		public T GetTrack<T>() where T : ASFTrack
 		{
 			return m_Tracks.OfType<T>().FirstOrDefault();
+		}
+
+		public ASFTrack GetTrack(Type _Type)
+		{
+			return m_Tracks.FirstOrDefault(_Track => _Track.GetType() == _Type);
+		}
+
+		public void SortTrack<TTrack, TClip>() where TTrack : ASFTrack<TClip> where TClip : ASFClip
+		{
+			TTrack track = GetTrack<TTrack>();
+			
+			track?.SortClips();
+			
+			Sample();
 		}
 	}
 }

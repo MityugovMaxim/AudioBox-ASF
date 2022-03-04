@@ -82,9 +82,13 @@ namespace AudioBox.ASF
 			MinTime = _Data.GetDouble("min_time");
 			MaxTime = _Data.GetDouble("max_time");
 			
-			IList keysData = _Data.GetList("keys");
-			foreach (IDictionary<string, object> keyData in keysData.Cast<IDictionary<string, object>>())
+			Keys.Clear();
+			
+			IList<object> keysData = _Data.GetList("keys");
+			for (int i = 0; i < keysData.Count; i++)
 			{
+				IDictionary<string, object> keyData = keysData.GetDictionary(i);
+				
 				if (keyData == null)
 					continue;
 				

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using AudioBox.Compression;
 using UnityEngine;
 
 namespace AudioBox.ASF
@@ -10,7 +11,7 @@ namespace AudioBox.ASF
 
 		public abstract object Serialize();
 
-		public abstract void Deserialize(IList _Data);
+		public abstract void Deserialize(IList<object> _Data);
 	}
 
 	public abstract class ASFTrack<T> : ASFTrack where T : ASFClip
@@ -26,6 +27,7 @@ namespace AudioBox.ASF
 		public ASFTrack(ASFTrackContext<T> _Context)
 		{
 			Context = _Context;
+			Context.Clear();
 		}
 
 		public override object Serialize()
@@ -41,11 +43,12 @@ namespace AudioBox.ASF
 			return data;
 		}
 
-		public override void Deserialize(IList _Data)
+		public override void Deserialize(IList<object> _Data)
 		{
 			MinIndex = -1;
 			MaxIndex = -1;
 			
+			Context.Clear();
 			m_Clips.Clear();
 			
 			if (_Data == null)

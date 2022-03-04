@@ -44,10 +44,10 @@ namespace AudioBox.ASF
 			IDictionary<string, object> data = new Dictionary<string, object>();
 			
 			data["time"]                 = Time;
-			data["background_primary"]   = ColorUtility.ToHtmlStringRGBA(BackgroundPrimary);
-			data["background_secondary"] = ColorUtility.ToHtmlStringRGBA(BackgroundSecondary);
-			data["foreground_primary"]   = ColorUtility.ToHtmlStringRGBA(ForegroundPrimary);
-			data["foreground_secondary"] = ColorUtility.ToHtmlStringRGBA(ForegroundSecondary);
+			data["background_primary"]   = '#' + ColorUtility.ToHtmlStringRGBA(BackgroundPrimary);
+			data["background_secondary"] = '#' + ColorUtility.ToHtmlStringRGBA(BackgroundSecondary);
+			data["foreground_primary"]   = '#' + ColorUtility.ToHtmlStringRGBA(ForegroundPrimary);
+			data["foreground_secondary"] = '#' + ColorUtility.ToHtmlStringRGBA(ForegroundSecondary);
 			
 			return data;
 		}

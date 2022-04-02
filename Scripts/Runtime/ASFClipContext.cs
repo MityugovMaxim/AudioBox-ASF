@@ -21,15 +21,13 @@ namespace AudioBox.ASF
 
 		protected RectTransform Container { get; private set; }
 
-		static readonly Vector2 m_Pivot = new Vector2(0.5f, 0.5f);
-
 		protected virtual void Setup(RectTransform _Container, TClip _Clip, Rect _ClipRect, Rect _ViewRect)
 		{
 			Vector2 pivot = _Container.pivot;
 			RectTransform.SetParent(_Container);
 			RectTransform.anchorMin = pivot;
 			RectTransform.anchorMax = pivot;
-			RectTransform.pivot     = m_Pivot;
+			RectTransform.pivot     = new Vector2(0.5f, 0.5f);
 			
 			Container = _Container;
 			Clip      = _Clip;

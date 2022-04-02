@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AudioBox.Logging;
@@ -17,6 +16,7 @@ namespace AudioBox.ASF
 	{
 		Stop,
 		Play,
+		Loading,
 	}
 
 	public abstract class ASFPlayer : UIEntity
@@ -37,8 +37,6 @@ namespace AudioBox.ASF
 			}
 		}
 
-		public double Length => m_MusicMin + m_MusicMax + m_AudioSource.clip.length;
-
 		public float Duration
 		{
 			get => m_Duration;
@@ -48,7 +46,7 @@ namespace AudioBox.ASF
 		public float Ratio
 		{
 			get => m_Ratio;
-			set => m_Ratio = value;
+			protected set => m_Ratio = value;
 		}
 
 		public AudioClip AudioClip
@@ -57,9 +55,7 @@ namespace AudioBox.ASF
 			set => m_AudioSource.clip = value;
 		}
 
-		public event Action OnFinish;
-
-		ASFPlayerState State { get; set; } = ASFPlayerState.Stop;
+		public ASFPlayerState State { get; private set; } = ASFPlayerState.Stop;
 
 		float MinTime => m_Duration * (m_Ratio - 1);
 
@@ -68,8 +64,6 @@ namespace AudioBox.ASF
 		[SerializeField] double      m_Time;
 		[SerializeField] float       m_Ratio;
 		[SerializeField] float       m_Duration;
-		[SerializeField] double      m_MusicMin;
-		[SerializeField] double      m_MusicMax;
 		[SerializeField] AudioSource m_AudioSource;
 
 		readonly List<ASFTrack> m_Tracks = new List<ASFTrack>();
@@ -93,13 +87,15 @@ namespace AudioBox.ASF
 
 		public async void Play()
 		{
-			if (State == ASFPlayerState.Play)
+			if (State == ASFPlayerState.Play || State == ASFPlayerState.Loading)
 				return;
 			
 			AudioClip audioClip = m_AudioSource.clip;
 			
 			if (audioClip == null)
 				return;
+			
+			State = ASFPlayerState.Loading;
 			
 			m_TokenSource?.Cancel();
 			m_TokenSource?.Dispose();
@@ -108,14 +104,14 @@ namespace AudioBox.ASF
 			
 			CancellationToken token = m_TokenSource.Token;
 			
-			double offset  = Math.Max(0, m_MusicMin - Time);
-			double samples = ASFMath.RemapClamped(Time - m_MusicMin, 0, (double)audioClip.samples / audioClip.frequency, 0, audioClip.samples);
+			double offset  = -Math.Min(0, Time);
+			double samples = ASFMath.RemapClamped(Time, 0, (double)audioClip.samples / audioClip.frequency, 0, audioClip.samples);
 			
 			m_AudioSource.Stop();
 			
-			m_AudioSource.timeSamples = (int)samples;
-			
 			m_AudioSource.PlayScheduled(AudioSettings.dspTime + offset + MUSIC_OFFSET - AudioManager.Latency);
+			
+			m_AudioSource.timeSamples = (int)samples;
 			
 			double error = 0;
 			
@@ -139,9 +135,9 @@ namespace AudioBox.ASF
 			if (token.IsCancellationRequested)
 				return;
 			
-			Time -= error;
-			
 			State = ASFPlayerState.Play;
+			
+			Time -= error;
 			
 			Sample();
 			
@@ -156,19 +152,10 @@ namespace AudioBox.ASF
 			
 			State = ASFPlayerState.Stop;
 			
-			AudioClip audioClip = m_AudioSource.clip;
-			
-			if (audioClip == null)
-				return;
-			
 			m_TokenSource?.Cancel();
 			m_TokenSource?.Dispose();
 			
-			double samples = ASFMath.RemapClamped(Time - m_MusicMin, 0, (double)audioClip.samples / audioClip.frequency, 0, audioClip.samples);
-			
 			m_AudioSource.Stop();
-			
-			m_AudioSource.timeSamples = (int)samples;
 			
 			Sample();
 		}
@@ -180,16 +167,9 @@ namespace AudioBox.ASF
 			
 			foreach (ASFTrack track in m_Tracks)
 				track.Sample(Time, minTime, maxTime);
-			
-			if (Time < Length)
-				return;
-			
-			OnFinish?.Invoke();
-			
-			Stop();
 		}
 
-		public IDictionary<string, object> Serialize()
+		protected IDictionary<string, object> Serialize()
 		{
 			IDictionary<string, object> data = new Dictionary<string, object>();
 			
@@ -209,14 +189,12 @@ namespace AudioBox.ASF
 			return data;
 		}
 
-		public void Deserialize(object _Data)
+		protected void Deserialize(IDictionary<string, object> _Data)
 		{
-			IDictionary<string, object> data = _Data as IDictionary<string, object>;
-			
-			if (data == null)
+			if (_Data == null)
 				return;
 			
-			foreach (string key in data.GetKeys())
+			foreach (string key in _Data.GetKeys())
 			{
 				Type type = Type.GetType($"AudioBox.ASF.{key}");
 				
@@ -231,7 +209,7 @@ namespace AudioBox.ASF
 					continue;
 				}
 				
-				track.Deserialize(data.GetList(key));
+				track.Deserialize(_Data.GetList(key));
 			}
 		}
 

@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using AudioBox.UI;
-using AudioBox.Logging;
 using UnityEngine;
 
 namespace AudioBox.ASF
